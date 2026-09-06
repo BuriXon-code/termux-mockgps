@@ -9,7 +9,8 @@ usage() {
 usage: termux-mockgps [options]
 Mock the device location.
 
-  start            Start mocking the saved location.
+  start            Start mocking the last saved location.
+  start [lat lon]  Start mocking at the specified location.
   stop             Stop mocking and restore normal location.
   set [lat lon]    Set the mock location.
 
@@ -43,9 +44,34 @@ command_start() {
 		return 1
 	fi
 
-	am startservice \
-		-n "$PKG/$SERVICE" \
-		--es command on
+	lat="$1"
+	lon="$2"
+
+	if [ -n "$lat" ] || [ -n "$lon" ]; then
+
+		if [ -z "$lat" ] || [ -z "$lon" ]; then
+			printf '%s\n' "Invalid coordinates." >&2
+			return 1
+		fi
+
+		if ! valid_number "$lat" ||
+			! valid_number "$lon"
+		then
+			printf '%s\n' "Invalid coordinates." >&2
+			return 1
+		fi
+
+		am startservice \
+			-n "$PKG/$SERVICE" \
+			--es command on \
+			--es lat "$lat" \
+			--es lon "$lon"
+	else
+
+		am startservice \
+			-n "$PKG/$SERVICE" \
+			--es command on
+	fi
 }
 
 command_set() {
@@ -76,8 +102,6 @@ command_set() {
 		--es lat "$lat" \
 		--es lon "$lon" \
 		>/dev/null
-
-	return $?
 }
 
 command_stop() {
@@ -92,11 +116,11 @@ command_stop() {
 		--es command off \
 		>/dev/null
 
+	sleep 0.2
+
 	am stopservice \
 		-n "$PKG/$SERVICE" \
 		>/dev/null
-
-	return 0
 }
 
 COMMAND=""
@@ -108,34 +132,28 @@ while [ "$#" -gt 0 ]; do
 	case "$1" in
 
 		start|stop|set|help|-h|--help)
-
 			if [ -z "$COMMAND" ]; then
 				COMMAND="$1"
 			fi
-
 			shift
 			;;
 
 		-lat:*)
-
 			LAT=${1#-lat:}
 			shift
 			;;
 
 		-lon:*)
-
 			LON=${1#-lon:}
 			shift
 			;;
 
 		-*)
-
 			printf '%s\n' "Unknown option: $1" >&2
 			exit 1
 			;;
 
 		*)
-
 			if [ -z "$LAT" ]; then
 				LAT="$1"
 			elif [ -z "$LON" ]; then
@@ -155,23 +173,14 @@ done
 case "$COMMAND" in
 
 	start)
-
-		if [ -n "$LAT" ] || [ -n "$LON" ]; then
-			printf '%s\n' \
-				"start does not accept coordinates. Use set." >&2
-			exit 1
-		fi
-
-		command_start
+		command_start "$LAT" "$LON"
 		;;
 
 	set)
-
 		command_set "$LAT" "$LON"
 		;;
 
 	stop)
-
 		command_stop
 		;;
 
@@ -180,7 +189,6 @@ case "$COMMAND" in
 		;;
 
 	*)
-
 		printf '%s\n' "Unknown command: $COMMAND" >&2
 		exit 1
 		;;
