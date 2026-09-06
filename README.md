@@ -1,6 +1,6 @@
 # termux-mockgps
 
-A minimal POSIX shell command-line interface for controlling the Android `MockGPS` application from Termux.
+A minimal POSIX shell command-line interface for controlling the Android [MockGPS](https://github.com/BuriXon-code/MockGPS) application from Termux.
 
 The command is intentionally simple. It does not maintain a configuration file and does not require a separate status or database system.
 
