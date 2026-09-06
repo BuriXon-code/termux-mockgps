@@ -251,3 +251,21 @@ Termux command:
 GPL-3.0.
 
 See the `LICENSE` file for the full license text.
+
+## Support
+
+### Contact me:
+
+For any issues, suggestions, or questions, reach out via:
+
+- *Email:* support@burixon.dev
+- *Contact form:* [Click here](https://burixon.dev/contact/)
+- *Bug reports:* [Click here](https://burixon.dev/bugreport/#termux-mockgps)
+
+### Support me:
+
+If you find this script useful, consider supporting my work by making a donation:
+
+[**Donations**](https://burixon.dev/donate/)
+
+Your contributions help in developing new projects and improving existing tools!
