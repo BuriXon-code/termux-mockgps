@@ -1,0 +1,188 @@
+#!/bin/sh
+
+PKG="dev.burixon.mockgps"
+SERVICE=".MockLocationService"
+RECEIVER=".MockGpsReceiver"
+
+usage() {
+	cat <<EOF
+usage: termux-mockgps [options]
+Mock the device location.
+
+  start            Start mocking the saved location.
+  stop             Stop mocking and restore normal location.
+  set [lat lon]    Set the mock location.
+
+Coordinates may also be specified as:
+  -lat:50.06143 -lon:19.93658
+EOF
+}
+
+is_installed() {
+	pm path "$PKG" >/dev/null 2>&1
+}
+
+valid_number() {
+	case "$1" in
+		''|'-'|'+'|'.'|'-.'|'+.')
+			return 1
+			;;
+
+		*[!0-9.+-]*)
+			return 1
+			;;
+	esac
+
+	return 0
+}
+
+command_start() {
+
+	if ! is_installed; then
+		printf '%s\n' "MockGPS is not installed." >&2
+		return 1
+	fi
+
+	am startservice \
+		-n "$PKG/$SERVICE" \
+		--es command on
+}
+
+command_set() {
+
+	if ! is_installed; then
+		printf '%s\n' "MockGPS is not installed." >&2
+		return 1
+	fi
+
+	lat="$1"
+	lon="$2"
+
+	if [ -z "$lat" ] || [ -z "$lon" ]; then
+		printf '%s\n' "Invalid coordinates." >&2
+		return 1
+	fi
+
+	if ! valid_number "$lat" ||
+		! valid_number "$lon"
+	then
+		printf '%s\n' "Invalid coordinates." >&2
+		return 1
+	fi
+
+	am broadcast \
+		-n "$PKG/$RECEIVER" \
+		--es command set \
+		--es lat "$lat" \
+		--es lon "$lon" \
+		>/dev/null
+
+	return $?
+}
+
+command_stop() {
+
+	if ! is_installed; then
+		printf '%s\n' "MockGPS is not installed." >&2
+		return 1
+	fi
+
+	am broadcast \
+		-n "$PKG/$RECEIVER" \
+		--es command off \
+		>/dev/null
+
+	am stopservice \
+		-n "$PKG/$SERVICE" \
+		>/dev/null
+
+	return 0
+}
+
+COMMAND=""
+LAT=""
+LON=""
+
+while [ "$#" -gt 0 ]; do
+
+	case "$1" in
+
+		start|stop|set|help|-h|--help)
+
+			if [ -z "$COMMAND" ]; then
+				COMMAND="$1"
+			fi
+
+			shift
+			;;
+
+		-lat:*)
+
+			LAT=${1#-lat:}
+			shift
+			;;
+
+		-lon:*)
+
+			LON=${1#-lon:}
+			shift
+			;;
+
+		-*)
+
+			printf '%s\n' "Unknown option: $1" >&2
+			exit 1
+			;;
+
+		*)
+
+			if [ -z "$LAT" ]; then
+				LAT="$1"
+			elif [ -z "$LON" ]; then
+				LON="$1"
+			else
+				printf '%s\n' "Too many arguments." >&2
+				exit 1
+			fi
+
+			shift
+			;;
+
+	esac
+
+done
+
+case "$COMMAND" in
+
+	start)
+
+		if [ -n "$LAT" ] || [ -n "$LON" ]; then
+			printf '%s\n' \
+				"start does not accept coordinates. Use set." >&2
+			exit 1
+		fi
+
+		command_start
+		;;
+
+	set)
+
+		command_set "$LAT" "$LON"
+		;;
+
+	stop)
+
+		command_stop
+		;;
+
+	help|-h|--help|"")
+		usage
+		;;
+
+	*)
+
+		printf '%s\n' "Unknown command: $COMMAND" >&2
+		exit 1
+		;;
+
+esac
