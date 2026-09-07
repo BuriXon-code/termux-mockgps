@@ -19,19 +19,37 @@
 PKG="dev.burixon.mockgps"
 SERVICE=".MockLocationService"
 RECEIVER=".MockGpsReceiver"
+SILENT='no'
+VERSION="1.0.0"
 
 usage() {
 	cat <<EOF
-usage: termux-mockgps [options]
-Mock the device location.
+usage: termux-mockgps <command> [options]
 
-  start            Start mocking the last saved location.
-  start [lat lon]  Start mocking at the specified location.
-  stop             Stop mocking and restore normal location.
-  set [lat lon]    Set the mock location.
+Mock device's GPS location via MockGPS.
 
-Coordinates may also be specified as:
-  -lat:50.06143 -lon:19.93658
+Commands:
+  start [lat lon]       Start mocking a location.
+  set <lat lon>         Set the mock location.
+  stop                  Stop mocking and restore normal location.
+  help                  Show this help message.
+  version               Show version information.
+
+Location:
+  Coordinates can be specified as:
+    50.06143 19.93658
+    50.06143,19.93658
+    -lat:50.06143 -lon:19.93658
+
+Options:
+  -silent               Suppress location change notifications.
+
+Examples:
+  termux-mockgps start
+  termux-mockgps start 50.06143 19.93658
+  termux-mockgps set 50.06143,19.93658
+  termux-mockgps set -lat:50.06143 -lon:19.93658 -silent
+  termux-mockgps stop
 EOF
 }
 
@@ -57,6 +75,7 @@ command_start() {
 
 	if ! is_installed; then
 		printf '%s\n' "MockGPS is not installed." >&2
+		printf '%s\n' "Visit https://burixon.dev/MockGPS/ to learn more." >&2
 		return 1
 	fi
 
@@ -77,14 +96,15 @@ command_start() {
 			return 1
 		fi
 
-		am startservice \
+		printf '%s\n' "Starting service:"
+		"$AM" startservice \
 			-n "$PKG/$SERVICE" \
 			--es command on \
 			--es lat "$lat" \
 			--es lon "$lon"
 	else
-
-		am startservice \
+		printf '%s\n' "Starting service:"
+		"$AM" startservice \
 			-n "$PKG/$SERVICE" \
 			--es command on
 	fi
@@ -94,6 +114,7 @@ command_set() {
 
 	if ! is_installed; then
 		printf '%s\n' "MockGPS is not installed." >&2
+		printf '%s\n' "Visit https://burixon.dev/MockGPS/ to learn more." >&2
 		return 1
 	fi
 
@@ -112,38 +133,45 @@ command_set() {
 		return 1
 	fi
 
-	am broadcast \
+	printf '%s\n' "Setting new coordinates:"
+	"$AM" broadcast \
 		-n "$PKG/$RECEIVER" \
 		--es command set \
 		--es lat "$lat" \
 		--es lon "$lon" \
-		>/dev/null
+		--es silent "$SILENT"
 }
 
 command_stop() {
 
+	status=0
+
 	if ! is_installed; then
 		printf '%s\n' "MockGPS is not installed." >&2
+		printf '%s\n' "Visit https://burixon.dev/MockGPS/ to learn more." >&2
 		return 1
 	fi
 
-	am broadcast \
+	printf '%s\n' "Stopping service:"
+	"$AM" stopservice \
+		-n "$PKG/$SERVICE"
+	status=$((status+$?))
+
+	printf '%s\n' "Disabling service:"
+	"$AM" broadcast \
 		-n "$PKG/$RECEIVER" \
 		--es command off \
-		>/dev/null
+		--es source cmd
+	status=$((status+$?))
 
-	sleep 0.2
-
-	am stopservice \
-		-n "$PKG/$SERVICE" \
-		>/dev/null
+	return $status
 }
 
 COMMAND=""
 LAT=""
 LON=""
 
-while [ "$#" -gt 0 ]; do
+until [ "$#" -eq 0 ]; do
 
 	case "$1" in
 
@@ -164,20 +192,44 @@ while [ "$#" -gt 0 ]; do
 			shift
 			;;
 
+		-silent)
+			SILENT='yes'
+			shift
+			;;
+
+		version|--version|-v)
+			printf '%s %s\n' termux-mockgps "$VERSION"
+			exit 0
+			;;
 		-*)
 			printf '%s\n' "Unknown option: $1" >&2
+			usage >&2
 			exit 1
 			;;
 
 		*)
-			if [ -z "$LAT" ]; then
-				LAT="$1"
-			elif [ -z "$LON" ]; then
-				LON="$1"
-			else
-				printf '%s\n' "Too many arguments." >&2
-				exit 1
-			fi
+			case "$1" in
+				*,*)
+					if [ -z "$LAT" ] && [ -z "$LON" ]; then
+						LAT=${1%%,*}
+						LON=${1#*,}
+					else
+						printf '%s\n' "Too many arguments." >&2
+						exit 1
+					fi
+					;;
+
+				*)
+					if [ -z "$LAT" ]; then
+						LAT="$1"
+					elif [ -z "$LON" ]; then
+						LON="$1"
+					else
+						printf '%s\n' "Too many arguments." >&2
+						exit 1
+					fi
+					;;
+			esac
 
 			shift
 			;;
@@ -185,6 +237,15 @@ while [ "$#" -gt 0 ]; do
 	esac
 
 done
+
+if [ -x "$(command -v am 2>/dev/null)" ]; then
+	AM="$(command -v am)"
+elif [ -x /system/bin/am ]; then
+	AM="/system/bin/am"
+else
+	printf '%s\n' "Android 'am' command not found." >&2
+	exit 1
+fi
 
 case "$COMMAND" in
 
@@ -200,12 +261,16 @@ case "$COMMAND" in
 		command_stop
 		;;
 
-	help|-h|--help|"")
+	help|-h|--help)
 		usage
 		;;
-
+	"")
+		usage >&2
+		exit 1
+		;;
 	*)
 		printf '%s\n' "Unknown command: $COMMAND" >&2
+		usage >&2
 		exit 1
 		;;
 

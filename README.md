@@ -31,17 +31,6 @@ termux-mockgps start -lat:50.06143 -lon:19.93658
 
 The script is POSIX `sh`.
 
-It does not require:
-
-* Bash.
-* `awk`.
-* `nc`.
-* `content`.
-* `dumpsys`.
-* ADB.
-* A configuration file.
-* A separate database.
-
 ## Installation
 
 Copy the script to Termux's executable directory:
@@ -95,9 +84,17 @@ The same command can be written using explicit coordinate options:
 termux-mockgps set -lat:50.06143 -lon:19.93658
 ```
 
+or
+
+```sh
+termux-mockgps set 50.06143,19.93658
+```
+
 When MockGPS is running, the new location becomes active automatically.
 
 When MockGPS is stopped, the new coordinates are stored for the next `start`.
+
+The `set` option forces the application to send an additional notification informing about coordinate changes. However, to change the coordinates without issuing a notification, use the additional `-silent` option.
 
 ## Stop
 
