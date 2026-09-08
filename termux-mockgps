@@ -47,8 +47,8 @@ Location:
 
 Boot:
   Values:
-    1, on               Enable mocking on boot.
-    0, off              Disable mocking on boot.
+    1|on                Enable mocking on boot.
+    0|off               Disable mocking on boot.
 
 Options:
   -silent               Suppress location change notifications.
