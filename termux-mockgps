@@ -175,6 +175,7 @@ command_start() {
 		printf '%s' "Starting service: "
 		if "$AM" startservice \
 			-n "$PKG/$SERVICE" \
+			--es source cli \
 			--es command on \
 			--es lat "$lat" \
 			--es lon "$lon" >/dev/null 2>&1; then
@@ -187,6 +188,7 @@ command_start() {
 		printf '%s' "Starting service: "
 		if "$AM" startservice \
 			-n "$PKG/$SERVICE" \
+			--es source cli \
 			--es command on >/dev/null 2>&1; then
 			printf '%b\n' "\033[1;32mok\033[0m"
 		else
@@ -218,6 +220,7 @@ command_set() {
 	printf '%s' "Setting new coordinates: "
 	if "$AM" broadcast \
 		-n "$PKG/$RECEIVER" \
+		--es source cli \
 		--es command set \
 		--es lat "$lat" \
 		--es lon "$lon" \
@@ -253,6 +256,7 @@ command_boot() {
 	printf '%s' "Setting boot mode: "
 	if "$AM" broadcast \
 		-n "$PKG/$RECEIVER" \
+		--es source cli \
 		--es boot "$boot_action" \
 		--es silent "$SILENT" >/dev/null 2>&1; then
 		printf '%b\n' "\033[1;32mok\033[0m"
@@ -294,6 +298,7 @@ command_stop() {
 	printf '%s' "Requesting service disable: "
 	if "$AM" broadcast \
 		-n "$PKG/$RECEIVER" \
+		--es source cli \
 		--es command off \
 		--es source cmd >/dev/null 2>&1; then
 		printf '%b\n' "\033[1;32mok\033[0m"
