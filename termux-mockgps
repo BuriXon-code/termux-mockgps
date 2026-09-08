@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/data/data/com.termux/files/usr/bin/sh
 
 # termux-mockgps
 # Copyright (C) 2026 BuriXon
@@ -10,8 +10,8 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
@@ -20,17 +20,21 @@ PKG="dev.burixon.mockgps"
 SERVICE=".MockLocationService"
 RECEIVER=".MockGpsReceiver"
 SILENT='no'
+URL="https://burixon.dev/MockGPS/"
 VERSION="1.0.0"
 
 usage() {
 	cat <<EOF
-usage: termux-mockgps <command> [options]
+termux-mockgps (c) 2026 Kamil BuriXon Burek
+Mock device's GPS location via MockGPS app.
 
-Mock device's GPS location via MockGPS.
+usage: termux-mockgps <command> [options]
 
 Commands:
   start [lat lon]       Start mocking a location.
   set <lat lon>         Set the mock location.
+  boot <0|1|on|off>     Enable or disable mocking on device boot.
+  open                  Open MockGPS application.
   stop                  Stop mocking and restore normal location.
   help                  Show this help message.
   version               Show version information.
@@ -41,43 +45,115 @@ Location:
     50.06143,19.93658
     -lat:50.06143 -lon:19.93658
 
+Boot:
+  Values:
+    1, on               Enable mocking on boot.
+    0, off              Disable mocking on boot.
+
 Options:
   -silent               Suppress location change notifications.
+                        Notifications are enabled by default for set and boot commands.
 
 Examples:
   termux-mockgps start
   termux-mockgps start 50.06143 19.93658
+  termux-mockgps start -50.06143 -19.93658
   termux-mockgps set 50.06143,19.93658
-  termux-mockgps set -lat:50.06143 -lon:19.93658 -silent
+  termux-mockgps set -50.06143,-19.93658
+  termux-mockgps set -lat:50.06143 -lon:-19.93658 -silent
+  termux-mockgps boot 1
+  termux-mockgps boot on -silent
+  termux-mockgps boot 0
+  termux-mockgps boot off
+  termux-mockgps open
   termux-mockgps stop
 EOF
 }
 
 is_installed() {
-	pm path "$PKG" >/dev/null 2>&1
+	if ! pm path "$PKG" >/dev/null 2>&1; then
+		printf '%s\n' "MockGPS app is not installed." >&2
+		printf '%s\n' "For more information, visit ${URL}." >&2
+		exit 1
+	fi
 }
 
-valid_number() {
-	case "$1" in
-		''|'-'|'+'|'.'|'-.'|'+.')
-			return 1
-			;;
+valid_coordinate() {
+	value="$1"
+	max="$2"
 
-		*[!0-9.+-]*)
+	case "$value" in
+		''|'+'|'-'|'.'|'+.'|-.*.*|+.*.*|*.*.*|*[!0-9.+-]*)
 			return 1
 			;;
 	esac
+
+	case "$value" in
+		+*|-*)
+			number=${value#?}
+			;;
+		*)
+			number="$value"
+			;;
+	esac
+
+	case "$number" in
+		*+*|*-*)
+			return 1
+			;;
+	esac
+
+	integer=${number%%.*}
+
+	case "$number" in
+		*.*)
+			fraction=${number#*.}
+			;;
+		*)
+			fraction=""
+			;;
+	esac
+
+	if [ -z "$integer" ]; then
+		integer=0
+	fi
+
+	case "$integer" in
+		*[!0-9]*)
+			return 1
+			;;
+	esac
+
+	case "$fraction" in
+		*[!0-9]*)
+			return 1
+			;;
+	esac
+
+	while [ "${integer#0}" != "$integer" ] && [ "$integer" != "0" ]; do
+		integer=${integer#0}
+	done
+
+	if [ "$integer" -gt "$max" ] 2>/dev/null; then
+		return 1
+	fi
+
+	if [ "$integer" -eq "$max" ] 2>/dev/null; then
+		case "$fraction" in
+			''|0*)
+				;;
+			*)
+				return 1
+				;;
+		esac
+	fi
 
 	return 0
 }
 
 command_start() {
 
-	if ! is_installed; then
-		printf '%s\n' "MockGPS is not installed." >&2
-		printf '%s\n' "Visit https://burixon.dev/MockGPS/ to learn more." >&2
-		return 1
-	fi
+	is_installed
 
 	lat="$1"
 	lon="$2"
@@ -89,34 +165,40 @@ command_start() {
 			return 1
 		fi
 
-		if ! valid_number "$lat" ||
-			! valid_number "$lon"
+		if ! valid_coordinate "$lat" 90 ||
+			! valid_coordinate "$lon" 180
 		then
 			printf '%s\n' "Invalid coordinates." >&2
 			return 1
 		fi
 
-		printf '%s\n' "Starting service:"
-		"$AM" startservice \
+		printf '%s' "Starting service: "
+		if "$AM" startservice \
 			-n "$PKG/$SERVICE" \
 			--es command on \
 			--es lat "$lat" \
-			--es lon "$lon"
+			--es lon "$lon" >/dev/null 2>&1; then
+			printf '%b\n' "\033[1;32mok\033[0m"
+		else
+			printf '%b\n' "\033[1;31merror\033[0m" >&2
+			exit 1
+		fi
 	else
-		printf '%s\n' "Starting service:"
-		"$AM" startservice \
+		printf '%s' "Starting service: "
+		if "$AM" startservice \
 			-n "$PKG/$SERVICE" \
-			--es command on
+			--es command on >/dev/null 2>&1; then
+			printf '%b\n' "\033[1;32mok\033[0m"
+		else
+			printf '%b\n' "\033[1;31merror\033[0m" >&2
+			exit 1
+		fi
 	fi
 }
 
 command_set() {
 
-	if ! is_installed; then
-		printf '%s\n' "MockGPS is not installed." >&2
-		printf '%s\n' "Visit https://burixon.dev/MockGPS/ to learn more." >&2
-		return 1
-	fi
+	is_installed
 
 	lat="$1"
 	lon="$2"
@@ -126,56 +208,113 @@ command_set() {
 		return 1
 	fi
 
-	if ! valid_number "$lat" ||
-		! valid_number "$lon"
+	if ! valid_coordinate "$lat" 90 ||
+		! valid_coordinate "$lon" 180
 	then
 		printf '%s\n' "Invalid coordinates." >&2
 		return 1
 	fi
 
-	printf '%s\n' "Setting new coordinates:"
-	"$AM" broadcast \
+	printf '%s' "Setting new coordinates: "
+	if "$AM" broadcast \
 		-n "$PKG/$RECEIVER" \
 		--es command set \
 		--es lat "$lat" \
 		--es lon "$lon" \
-		--es silent "$SILENT"
+		--es silent "$SILENT" >/dev/null 2>&1; then
+		printf '%b\n' "\033[1;32mok\033[0m"
+	else
+		printf '%b\n' "\033[1;31merror\033[0m" >&2
+		exit 1
+	fi
+}
+
+command_boot() {
+
+	is_installed
+
+	boot="$1"
+
+	case "$boot" in
+		1|on)
+			boot_action="enable"
+			;;
+
+		0|off)
+			boot_action="disable"
+			;;
+
+		*)
+			printf '%s\n' "Invalid boot option. Use 0, 1, on or off." >&2
+			return 1
+			;;
+	esac
+
+	printf '%s' "Setting boot mode: "
+	if "$AM" broadcast \
+		-n "$PKG/$RECEIVER" \
+		--es boot "$boot_action" \
+		--es silent "$SILENT" >/dev/null 2>&1; then
+		printf '%b\n' "\033[1;32mok\033[0m"
+	else
+		printf '%b\n' "\033[1;31merror\033[0m" >&2
+		exit 1
+	fi
+}
+
+command_open() {
+
+	is_installed
+
+	printf '%s' "Opening MockGPS: "
+	if "$AM" start \
+		-n "$PKG/.MainActivity" >/dev/null 2>&1; then
+		printf '%b\n' "\033[1;32mok\033[0m"
+	else
+		printf '%b\n' "\033[1;31merror\033[0m" >&2
+		exit 1
+	fi
 }
 
 command_stop() {
 
 	status=0
 
-	if ! is_installed; then
-		printf '%s\n' "MockGPS is not installed." >&2
-		printf '%s\n' "Visit https://burixon.dev/MockGPS/ to learn more." >&2
-		return 1
+	is_installed
+
+	printf '%s' "Stopping service: "
+	if "$AM" stopservice \
+		-n "$PKG/$SERVICE" >/dev/null 2>&1; then
+		printf '%b\n' "\033[1;32mok\033[0m"
+	else
+		status=$((status+$?))
+		printf '%b\n' "\033[1;33mnot running\033[0m" >&2
 	fi
 
-	printf '%s\n' "Stopping service:"
-	"$AM" stopservice \
-		-n "$PKG/$SERVICE"
-	status=$((status+$?))
-
-	printf '%s\n' "Disabling service:"
-	"$AM" broadcast \
+	printf '%s' "Requesting service disable: "
+	if "$AM" broadcast \
 		-n "$PKG/$RECEIVER" \
 		--es command off \
-		--es source cmd
-	status=$((status+$?))
+		--es source cmd >/dev/null 2>&1; then
+		printf '%b\n' "\033[1;32mok\033[0m"
+	else
+		status=$((status+$?))
+		printf '%b\n' "\033[1;31merror\033[0m" >&2
+	fi
 
-	return $status
+	exit $status
 }
 
 COMMAND=""
 LAT=""
 LON=""
+BOOT=""
 
 until [ "$#" -eq 0 ]; do
 
 	case "$1" in
 
-		start|stop|set|help|-h|--help)
+		start|stop|set|boot|open|help|-h|--help)
 			if [ -z "$COMMAND" ]; then
 				COMMAND="$1"
 			fi
@@ -201,6 +340,32 @@ until [ "$#" -eq 0 ]; do
 			printf '%s %s\n' termux-mockgps "$VERSION"
 			exit 0
 			;;
+
+		*,*)
+			if [ -z "$LAT" ] && [ -z "$LON" ]; then
+				LAT=${1%%,*}
+				LON=${1#*,}
+			else
+				printf '%s\n' "Too many arguments." >&2
+				exit 1
+			fi
+
+			shift
+			;;
+
+		-[0-9]*|-.[0-9]*)
+			if [ -z "$LAT" ]; then
+				LAT="$1"
+			elif [ -z "$LON" ]; then
+				LON="$1"
+			else
+				printf '%s\n' "Too many arguments." >&2
+				exit 1
+			fi
+
+			shift
+			;;
+
 		-*)
 			printf '%s\n' "Unknown option: $1" >&2
 			usage >&2
@@ -208,6 +373,21 @@ until [ "$#" -eq 0 ]; do
 			;;
 
 		*)
+			if [ "$COMMAND" = "boot" ] && [ -z "$BOOT" ]; then
+				case "$1" in
+					0|1|on|off)
+						BOOT="$1"
+						shift
+						continue
+						;;
+
+					*)
+						printf '%s\n' "Invalid boot option: $1" >&2
+						exit 1
+						;;
+				esac
+			fi
+
 			case "$1" in
 				*,*)
 					if [ -z "$LAT" ] && [ -z "$LON" ]; then
@@ -257,6 +437,14 @@ case "$COMMAND" in
 		command_set "$LAT" "$LON"
 		;;
 
+	boot)
+		command_boot "$BOOT"
+		;;
+
+	open)
+		command_open
+		;;
+
 	stop)
 		command_stop
 		;;
@@ -264,10 +452,12 @@ case "$COMMAND" in
 	help|-h|--help)
 		usage
 		;;
+
 	"")
 		usage >&2
 		exit 1
 		;;
+
 	*)
 		printf '%s\n' "Unknown command: $COMMAND" >&2
 		usage >&2
