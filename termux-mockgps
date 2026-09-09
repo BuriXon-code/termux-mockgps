@@ -181,7 +181,7 @@ command_start() {
 			--es lon "$lon" >/dev/null 2>&1; then
 			printf '%b\n' "\033[1;32mok\033[0m"
 		else
-			printf '%b\n' "\033[1;31merror\033[0m" >&2
+			printf '%b\n' "\a\033[1;31merror\033[0m" >&2
 			exit 1
 		fi
 	else
@@ -192,7 +192,7 @@ command_start() {
 			--es command on >/dev/null 2>&1; then
 			printf '%b\n' "\033[1;32mok\033[0m"
 		else
-			printf '%b\n' "\033[1;31merror\033[0m" >&2
+			printf '%b\n' "\a\033[1;31merror\033[0m" >&2
 			exit 1
 		fi
 	fi
@@ -227,7 +227,7 @@ command_set() {
 		--es silent "$SILENT" >/dev/null 2>&1; then
 		printf '%b\n' "\033[1;32mok\033[0m"
 	else
-		printf '%b\n' "\033[1;31merror\033[0m" >&2
+		printf '%b\n' "\a\033[1;31merror\033[0m" >&2
 		exit 1
 	fi
 }
@@ -261,7 +261,7 @@ command_boot() {
 		--es silent "$SILENT" >/dev/null 2>&1; then
 		printf '%b\n' "\033[1;32mok\033[0m"
 	else
-		printf '%b\n' "\033[1;31merror\033[0m" >&2
+		printf '%b\n' "\a\033[1;31merror\033[0m" >&2
 		exit 1
 	fi
 }
@@ -275,7 +275,7 @@ command_open() {
 		-n "$PKG/.MainActivity" >/dev/null 2>&1; then
 		printf '%b\n' "\033[1;32mok\033[0m"
 	else
-		printf '%b\n' "\033[1;31merror\033[0m" >&2
+		printf '%b\n' "\a\033[1;31merror\033[0m" >&2
 		exit 1
 	fi
 }
@@ -292,7 +292,7 @@ command_stop() {
 		printf '%b\n' "\033[1;32mok\033[0m"
 	else
 		status=$((status+$?))
-		printf '%b\n' "\033[1;33mnot running\033[0m" >&2
+		printf '%b\n' "\a\033[1;33mnot running\033[0m" >&2
 	fi
 
 	printf '%s' "Requesting service disable: "
@@ -304,7 +304,7 @@ command_stop() {
 		printf '%b\n' "\033[1;32mok\033[0m"
 	else
 		status=$((status+$?))
-		printf '%b\n' "\033[1;31merror\033[0m" >&2
+		printf '%b\n' "\a\033[1;31merror\033[0m" >&2
 	fi
 
 	exit $status
