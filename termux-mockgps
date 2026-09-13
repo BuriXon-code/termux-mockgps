@@ -70,7 +70,27 @@ EOF
 }
 
 is_installed() {
-	if ! pm path "$PKG" >/dev/null 2>&1; then
+	PM=""
+	
+	for path in \
+	    /system/bin/pm \
+	    /system/xbin/pm \
+	    /vendor/bin/pm \
+	    /product/bin/pm \
+	    /apex/*/bin/pm
+	do
+	    if [ -n "$path" ] && [ -x "$path" ]; then
+	        PM="$path"
+	        break
+	    fi
+	done
+	
+	if [ -z "$PM" ]; then
+	    printf "%s\n" "Error: pm command not found." >&2
+	    exit 1
+	fi
+		
+	if ! "$PM" path "$PKG" >/dev/null 2>&1; then
 		printf '%s\n' "MockGPS app is not installed." >&2
 		printf '%s\n' "For more information, visit ${URL}." >&2
 		exit 1
@@ -222,8 +242,7 @@ command_set() {
 		--es command set \
 		--es toast "$TOAST" \
 		--es lat "$lat" \
-		--es lon "$lon" \
-		--es toast "TOAST" >/dev/null 2>&1; then
+		--es lon "$lon" >/dev/null 2>&1; then
 		printf '%b\n' "\033[1;32mok\033[0m"
 	else
 		printf '%b\n' "\a\033[1;31merror\033[0m" >&2
