@@ -471,9 +471,16 @@ GPL-3.0.
 See [`LICENSE`](LICENSE) for the full license text.
 
 ## Support
+### Contact me:
+For any issues, suggestions, or questions, reach out via:
 
-For issues, suggestions, or questions:
+- *Email:* support@burixon.dev
+- *Contact form:* [Click here](https://burixon.dev/contact/)
+- *Bug reports:* [Click here](https://burixon.dev/bugreport/#termux-mockgps)
 
-- Email: `support@burixon.dev`
-- Contact form: https://burixon.dev/contact/
-- Bug reports: https://burixon.dev/bugreport/#termux-mockgps
+### Support me:
+If you find this script useful, consider supporting my work by making a donation:
+
+[**Donations**](https://burixon.dev/donate/)
+
+Your contributions help in developing new projects and improving existing tools!
