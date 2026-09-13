@@ -1,4 +1,6 @@
-# termux-mockgps
+# termux-mockgps 🗺️
+
+![Banner](/banner.png)
 
 `termux-mockgps` is a lightweight POSIX shell command for controlling the Android **[MockGPS](https://github.com/BuriXon-code/MockGPS)** application directly from Termux.
 
