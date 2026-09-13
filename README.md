@@ -473,7 +473,9 @@ GPL-3.0.
 See [`LICENSE`](LICENSE) for the full license text.
 
 ## Support
+
 ### Contact me:
+
 For any issues, suggestions, or questions, reach out via:
 
 - *Email:* support@burixon.dev
@@ -481,6 +483,7 @@ For any issues, suggestions, or questions, reach out via:
 - *Bug reports:* [Click here](https://burixon.dev/bugreport/#termux-mockgps)
 
 ### Support me:
+
 If you find this script useful, consider supporting my work by making a donation:
 
 [**Donations**](https://burixon.dev/donate/)
