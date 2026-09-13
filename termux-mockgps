@@ -19,8 +19,8 @@
 PKG="dev.burixon.mockgps"
 SERVICE=".MockLocationService"
 RECEIVER=".MockGpsReceiver"
-SILENT='no'
 URL="https://burixon.dev/MockGPS/"
+TOAST="yes"
 VERSION="1.0.0"
 
 usage() {
@@ -51,8 +51,7 @@ Boot:
     0|off               Disable mocking on boot.
 
 Options:
-  -silent               Suppress location change notifications.
-                        Notifications are enabled by default for set and boot commands.
+  -notoast              Do not display toast notification.
 
 Examples:
   termux-mockgps start
@@ -60,9 +59,9 @@ Examples:
   termux-mockgps start -50.06143 -19.93658
   termux-mockgps set 50.06143,19.93658
   termux-mockgps set -50.06143,-19.93658
-  termux-mockgps set -lat:50.06143 -lon:-19.93658 -silent
+  termux-mockgps set -lat:50.06143 -lon:-19.93658 -notoast
   termux-mockgps boot 1
-  termux-mockgps boot on -silent
+  termux-mockgps boot on -notoast
   termux-mockgps boot 0
   termux-mockgps boot off
   termux-mockgps open
@@ -175,8 +174,8 @@ command_start() {
 		printf '%s' "Starting service: "
 		if "$AM" startservice \
 			-n "$PKG/$SERVICE" \
-			--es source cli \
 			--es command on \
+			--es toast "$TOAST" \
 			--es lat "$lat" \
 			--es lon "$lon" >/dev/null 2>&1; then
 			printf '%b\n' "\033[1;32mok\033[0m"
@@ -188,8 +187,8 @@ command_start() {
 		printf '%s' "Starting service: "
 		if "$AM" startservice \
 			-n "$PKG/$SERVICE" \
-			--es source cli \
-			--es command on >/dev/null 2>&1; then
+			--es command on \
+			--es toast "$TOAST" >/dev/null 2>&1; then
 			printf '%b\n' "\033[1;32mok\033[0m"
 		else
 			printf '%b\n' "\a\033[1;31merror\033[0m" >&2
@@ -220,11 +219,11 @@ command_set() {
 	printf '%s' "Setting new coordinates: "
 	if "$AM" broadcast \
 		-n "$PKG/$RECEIVER" \
-		--es source cli \
 		--es command set \
+		--es toast "$TOAST" \
 		--es lat "$lat" \
 		--es lon "$lon" \
-		--es silent "$SILENT" >/dev/null 2>&1; then
+		--es toast "TOAST" >/dev/null 2>&1; then
 		printf '%b\n' "\033[1;32mok\033[0m"
 	else
 		printf '%b\n' "\a\033[1;31merror\033[0m" >&2
@@ -239,11 +238,11 @@ command_boot() {
 	boot="$1"
 
 	case "$boot" in
-		1|on)
+		1|on|enable|true)
 			boot_action="enable"
 			;;
 
-		0|off)
+		0|off|disable|false)
 			boot_action="disable"
 			;;
 
@@ -256,9 +255,42 @@ command_boot() {
 	printf '%s' "Setting boot mode: "
 	if "$AM" broadcast \
 		-n "$PKG/$RECEIVER" \
-		--es source cli \
+		--es conmand boot \
 		--es boot "$boot_action" \
-		--es silent "$SILENT" >/dev/null 2>&1; then
+		--es toast "$TOAST" >/dev/null 2>&1; then
+		printf '%b\n' "\033[1;32mok\033[0m"
+	else
+		printf '%b\n' "\a\033[1;31merror\033[0m" >&2
+		exit 1
+	fi
+}
+command_drift() {
+
+	is_installed
+
+	drift="$1"
+
+	case "$drift" in
+		1|on|enable|true)
+			drift_action="enable"
+			;;
+
+		0|off|disable|false)
+			drift_action="disable"
+			;;
+
+		*)
+			printf '%s\n' "Invalid drift option. Use 0, 1, on or off." >&2
+			return 1
+			;;
+	esac
+
+	printf '%s' "Setting drift mode: "
+	if "$AM" broadcast \
+		-n "$PKG/$RECEIVER" \
+		--es command drift \
+		--es drifting "$drift_action" \
+		--es toast "$TOAST" >/dev/null 2>&1; then
 		printf '%b\n' "\033[1;32mok\033[0m"
 	else
 		printf '%b\n' "\a\033[1;31merror\033[0m" >&2
@@ -298,8 +330,8 @@ command_stop() {
 	printf '%s' "Requesting service disable: "
 	if "$AM" broadcast \
 		-n "$PKG/$RECEIVER" \
-		--es source cli \
 		--es command off \
+		--es toast "$TOAST" \
 		--es source cmd >/dev/null 2>&1; then
 		printf '%b\n' "\033[1;32mok\033[0m"
 	else
@@ -319,7 +351,7 @@ until [ "$#" -eq 0 ]; do
 
 	case "$1" in
 
-		start|stop|set|boot|open|help|-h|--help)
+		start|stop|set|boot|drift|open|help|-h|--help)
 			if [ -z "$COMMAND" ]; then
 				COMMAND="$1"
 			fi
@@ -336,8 +368,8 @@ until [ "$#" -eq 0 ]; do
 			shift
 			;;
 
-		-silent)
-			SILENT='yes'
+		-notoast)
+			TOAST="no"
 			shift
 			;;
 
@@ -380,7 +412,7 @@ until [ "$#" -eq 0 ]; do
 		*)
 			if [ "$COMMAND" = "boot" ] && [ -z "$BOOT" ]; then
 				case "$1" in
-					0|1|on|off)
+					0|1|on|off|true|false|enable|disable)
 						BOOT="$1"
 						shift
 						continue
@@ -388,6 +420,20 @@ until [ "$#" -eq 0 ]; do
 
 					*)
 						printf '%s\n' "Invalid boot option: $1" >&2
+						exit 1
+						;;
+				esac
+			fi
+			if [ "$COMMAND" = "drift" ] && [ -z "$DRIFT" ]; then
+				case "$1" in
+					0|1|on|off|true|false|enable|disable)
+						DRIFT="$1"
+						shift
+						continue
+						;;
+
+					*)
+						printf '%s\n' "Invalid drift option: $1" >&2
 						exit 1
 						;;
 				esac
@@ -444,6 +490,10 @@ case "$COMMAND" in
 
 	boot)
 		command_boot "$BOOT"
+		;;
+		
+	drift)
+		command_drift "$DRIFT"
 		;;
 
 	open)
