@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+# important variables ans states
 PKG="dev.burixon.mockgps"
 SERVICE=".MockLocationService"
 RECEIVER=".MockGpsReceiver"
@@ -23,6 +24,7 @@ URL="https://burixon.dev/MockGPS/"
 TOAST="yes"
 VERSION="1.0.0"
 
+# usage info
 usage() {
 	cat <<EOF
 termux-mockgps (c) 2026 Kamil BuriXon Burek
@@ -69,8 +71,17 @@ Examples:
 EOF
 }
 
+# checking if the package is installed
 is_installed() {
 	PM=""
+	
+	# we use android system pm because pm in Termux
+	# is broken by default and I don't want to require
+	# the user to fix it themselves...
+	#
+	#  I wonder when the termux or termux package
+	# developers will look into this and fix this...
+	# it's crap - just remove two lines...
 	
 	for path in \
 	    /system/bin/pm \
@@ -79,6 +90,9 @@ is_installed() {
 	    /product/bin/pm \
 	    /apex/*/bin/pm
 	do
+		# we check each of the files mentioned above
+		# and the first one available becomes our
+		# executable file
 	    if [ -n "$path" ] && [ -x "$path" ]; then
 	        PM="$path"
 	        break
@@ -98,6 +112,17 @@ is_installed() {
 }
 
 valid_coordinate() {
+
+	# yes yes... this whole function can be enclosed
+	# in 2-4 lines of AWK...
+	#
+	# but I don't use AWK on purpose - I rely on POSIX sh
+
+	# so here a thorough check takes place whether the
+	# given parameters are the correct coordinates meeting
+	# the standards of the script and then the broadcast
+	# receiver parser
+
 	value="$1"
 	max="$2"
 
@@ -172,6 +197,10 @@ valid_coordinate() {
 
 command_start() {
 
+	# this function passes parameters (coordinates) to the
+	# parser and then executes am with or without
+	# parameters accordingly
+
 	is_installed
 
 	lat="$1"
@@ -219,6 +248,8 @@ command_start() {
 
 command_set() {
 
+	# similarly, but with the set command
+
 	is_installed
 
 	lat="$1"
@@ -251,6 +282,8 @@ command_set() {
 }
 
 command_boot() {
+
+	# and again - analogously
 
 	is_installed
 
@@ -285,6 +318,8 @@ command_boot() {
 }
 command_drift() {
 
+	# and again :)
+
 	is_installed
 
 	drift="$1"
@@ -308,8 +343,8 @@ command_drift() {
 	if "$AM" broadcast \
 		-n "$PKG/$RECEIVER" \
 		--es command drift \
-		--es drifting "$drift_action" \
-		--es toast "$TOAST" >/dev/null 2>&1; then
+		--es toast "$TOAST" \
+		--es drifting "$drift_action"  >/dev/null 2>&1; then
 		printf '%b\n' "\033[1;32mok\033[0m"
 	else
 		printf '%b\n' "\a\033[1;31merror\033[0m" >&2
@@ -318,6 +353,11 @@ command_drift() {
 }
 
 command_open() {
+
+	# oh, this is probably the simplest function
+
+	# I don't know if it will be useful to anyone, but
+	# let it be
 
 	is_installed
 
@@ -332,6 +372,8 @@ command_open() {
 }
 
 command_stop() {
+
+	# and again letters and symbols...
 
 	status=0
 
@@ -360,6 +402,10 @@ command_stop() {
 
 	exit $status
 }
+
+# and this is where, dear reader, the main logic begins
+# - accepting and parsing arguments, and then choosing
+# the appropriate path further :)
 
 COMMAND=""
 LAT=""
@@ -539,3 +585,5 @@ case "$COMMAND" in
 		;;
 
 esac
+
+# and that's it :)
